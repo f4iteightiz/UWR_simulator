@@ -1,5 +1,5 @@
 # UWR_simulator
-#################################################################################################################################
+
 Underwaterrugby 3D simulation and visualization application for training discussion purpose for players and referees.
 
 It visualize positioning of players in a swimmingpool in 3D (interaction area of player simplified with a sphere).
