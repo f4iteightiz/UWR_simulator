@@ -23,6 +23,7 @@ Application tested on
 3. Linux Debian Stretch Kernel 4.9 32bits 1280x800 Toshiba Satellite Pro
 
 
+
 Explanation of page "control”:
 
 Left side player blue 1..6 and white 1..6 entries: Entries for new player 3D coordinates. The value is positive for blue: at each side, front positioning, positioning to the right and positioning below (maximum 4m). In order to move the players to the given position, click on button "start move" when at "move players" “to menu coord” is selected. Negative value can be given for the white players in case they are outside the field left (in the exchange area observing a penalty for example).
@@ -62,6 +63,7 @@ Format of the file; it has the endig .csv and can be uploaded into Libroffice ca
 "speed" entries: for time based movements (depending of speed) not implemented yet. 
 
 
+
 Explanation of page "settings”:
 
 "add separate window" area: additional windows can be opened in case a second desktop is available for presentation to other persons during a rugby discussion/seminar. 
@@ -73,6 +75,7 @@ Explanation of page "settings”:
 "default file name.." entries for giving names to files which can be created/stored.
 
 
+
 Explanation of page "tools”:
 
 "free (1/2 sphere)" Activate a half of a sphere at the given position: this represent the 2m distance where any player of the other team should not act during the release of a free. 
@@ -82,13 +85,12 @@ Explanation of page "tools”:
 "penalty (1/4 sphere)" a quarter of a sphere can be drawn at the given position: it represent the distance where the goalkeeper should stay as long he is not having full control of the ball during a penalty. He can goes up, outside of that sphere, to take a breath, but not do anything against the player and the ball outside that sphere.
 
 
+
 Next to come (not exhaustiv):
 
 - Test in other linux versions, LXDE, screen size, Microsoft Windows and make necessary improvements of the python script and/or README in order to make the application running out of the box in diverse environment
 - create new file positioning sequences and video creation of it 
 - create pictures of typical game positioning 
 - share of generated pictures and video on youtube.com
-- edit/change file of movement sequences
 - Improve/developp functionality: realtime behaviour (time based)
-- create pictures and file sequences and video to share ou youtube.com
 - Move GUI from Gtk3 to Qt5
