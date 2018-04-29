@@ -23,6 +23,7 @@
  * =====================================================================================================================
 """
 import math
+import time
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk as gtk, Gdk as gdk, GLib, GObject as gobject
@@ -73,6 +74,7 @@ def draw_basket(ax1, x, y, z, h, color='black'):
         A = A+1
 
 def draw_halfsphere (ax1, x, y, z, sph_radius, color=(0,0,1,1)):
+    print("draw halfshere")
     """draw a half of a sphere around the player starting a free
     it show the area where the players of the other team which are inside should not move.
     players of the other team outside that area can attack immediatly the ball holder
@@ -93,6 +95,7 @@ def draw_halfsphere (ax1, x, y, z, sph_radius, color=(0,0,1,1)):
     return halffreesphere
 #
 def draw_quartersphere (ax1, x, y, diam_penalty, side):
+    print("draw quarter sphere")
     """draw a quarter of a sphere around the basket representing the penalty
     area the goalkeeper should not leave"
     Args:
@@ -140,7 +143,7 @@ def OnClick(event):
         clicked_coord [1, 1] = selected_coord[1]
         clicked_coord [1, 2] = selected_coord[2]
         print ("selected position X: %5.2f   Y: %5.2f   Z: %5.2f" % (selected_coord[0], selected_coord[1],selected_coord[2]))
-        print ("distance between selected points:  %5.2f" % np.sqrt ((clicked_coord [0, 0] - clicked_coord [1, 0])**2
+        print ("distance to previous selected point:  %5.2f" % np.sqrt ((clicked_coord [0, 0] - clicked_coord [1, 0])**2
                     + (clicked_coord [0, 1]- clicked_coord [1, 1])**2
                     + (clicked_coord [0, 2] - clicked_coord [1, 2])**2))
 
@@ -175,7 +178,6 @@ def annotatePlot(X, index):
     global selected_coord
     global last_mark
     """Create popover label in 3d chart
-
     Args:
         X (np.array) - array of points, of shape (numPoints, 3)
         index (int) - index (into points array X) of item which should be printed
@@ -301,11 +303,10 @@ def OneWindow(s_w_shared,s_d_shared,s_l_shared,el_w_shared,elevation_shared, azi
         annotate3D(ax1_one, s=str(j+1), xyz=xyz_, fontsize=10, xytext=(-3,3),
                    textcoords='offset points', ha='right', va='bottom')
     #
+    Frame = 2
     #
-    Frame = 10
-    #
-    ani1_one = animation.FuncAnimation(fig_one, animate_one, frames=Frame, interval=600, blit=False, repeat=True,
-                                       repeat_delay=500)
+    ani1_one = animation.FuncAnimation(fig_one, animate_one, frames=Frame, interval=5, blit=False, repeat=True,
+                                       repeat_delay=2)
     #
     plt.pause(0.001)
     plt.show()
@@ -547,154 +548,111 @@ def animate(i):
     global dynamic_move_according_file
     global ax1
     global free_sphere
+    global frame_divisor
+    global anim_video_on
+    global animation_slow
     #
     azimut, elevation = ax1.azim, ax1.elev
     azimut_shared.value = azimut
     elevation_shared.value = elevation
     #
-    frame_divisor = int(foo.frame_scaling.get_value())  # if it is too slow, change as a global variable stored in
-                                                        # the setting menue. perhaps this makes the whole programm
-                                                        # slow and too much interaction with the GUI is not soo good
-
+    # in case the slow motion is activated, add 100ms at each frame
+    if animation_slow:
+        plt.pause(0.100)
+    #
     if i==0 and player_go_to_clicked:
         player_go_to_clicked = False
         move_running = True
-
-        pos_ball_now[0, 0] += (1. / Frame) * pos_ball_deltamove[0, 0]
-        pos_ball_now[0, 1] += (1. / Frame) * pos_ball_deltamove[0, 1]
-        pos_ball_now[0, 2] += (1. / Frame) * pos_ball_deltamove[0, 2]
-        pos_ball_now_shared[0] = pos_ball_now[0, 0]
-        pos_ball_now_shared[1] = pos_ball_now[0, 1]
-        pos_ball_now_shared[2] = pos_ball_now[0, 2]
-
-        for j in range(6):
-            pos_pb_now[j, 0] += (1. / Frame) * pos_pb_deltamove[j, 0]
-            pos_pb_now[j, 1] += (1. / Frame) * pos_pb_deltamove[j, 1]
-            pos_pb_now[j, 2] += (1. / Frame) * pos_pb_deltamove[j, 2]
-            pos_pw_now[j, 0] += (1. / Frame) * pos_pw_deltamove[j, 0]
-            pos_pw_now[j, 1] += (1. / Frame) * pos_pw_deltamove[j, 1]
-            pos_pw_now[j, 2] += (1. / Frame) * pos_pw_deltamove[j, 2]
-            pos_pb_now_shared[j * 3] = pos_pb_now[j, 0]
-            pos_pb_now_shared[j * 3 + 1] = pos_pb_now[j, 1]
-            pos_pb_now_shared[j * 3 + 2] = pos_pb_now[j, 2]
-            pos_pw_now_shared[j * 3] = pos_pw_now[j, 0]
-            pos_pw_now_shared[j * 3 + 1] = pos_pw_now[j, 1]
-            pos_pw_now_shared[j * 3 + 2] = pos_pw_now[j, 2]
-
+        pos_ball_now[0,:] += (1. / Frame) * pos_ball_deltamove[0,:]
+        pos_ball_now_shared[:] = pos_ball_now[0,:]
+        pos_pb_now[:,:] += (1. / Frame) * pos_pb_deltamove[:,:]
+        pos_pw_now[:,:] += (1. / Frame) * pos_pw_deltamove[:,:]
+        pos_pb_now_shared[:] = pos_pb_now.flat[:]
+        pos_pw_now_shared[:] = pos_pw_now.flat[:]
 
         p_b._offsets3d = pos_pb_now[:, 0], pos_pb_now[:, 1], pos_pb_now[:, 2]
         p_w._offsets3d = pos_pw_now[:, 0], pos_pw_now[:, 1], pos_pw_now[:, 2]
         p_ball._offsets3d = pos_ball_now[:, 0], pos_ball_now[:, 1], pos_ball_now[:, 2]
 
         # store image for future converting to video
-        if (foo.button_anim_video_on.get_active()):
+        if anim_video_on:
             video_page_iter = video_page_iter + 1
+#
+########################################################################################################################
+########################################################################################################################
+# path of the picture directory to be eventually adapted depending of the computer configuration
+#
             plt.savefig("/home/family/Bilder" + "/file%03d.png" % video_page_iter)
-
+#
+########################################################################################################################
+########################################################################################################################
     else:
         if move_running:
 
-            pos_ball_now[0, 0] += (1. / Frame) * pos_ball_deltamove[0, 0]
-            pos_ball_now[0, 1] += (1. / Frame) * pos_ball_deltamove[0, 1]
-            pos_ball_now[0, 2] += (1. / Frame) * pos_ball_deltamove[0, 2]
-            pos_ball_now_shared[0] = pos_ball_now[0, 0]
-            pos_ball_now_shared[1] = pos_ball_now[0, 1]
-            pos_ball_now_shared[2] = pos_ball_now[0, 2]
-
-            for j in range(6):
-                pos_pb_now[j, 0] += (1. / Frame) * pos_pb_deltamove[j, 0]
-                pos_pb_now[j, 1] += (1. / Frame) * pos_pb_deltamove[j, 1]
-                pos_pb_now[j, 2] += (1. / Frame) * pos_pb_deltamove[j, 2]
-                pos_pw_now[j, 0] += (1. / Frame) * pos_pw_deltamove[j, 0]
-                pos_pw_now[j, 1] += (1. / Frame) * pos_pw_deltamove[j, 1]
-                pos_pw_now[j, 2] += (1. / Frame) * pos_pw_deltamove[j, 2]
-                pos_pb_now_shared[j * 3] = pos_pb_now[j, 0]
-                pos_pb_now_shared[j * 3 + 1] = pos_pb_now[j, 1]
-                pos_pb_now_shared[j * 3 + 2] = pos_pb_now[j, 2]
-                pos_pw_now_shared[j * 3] = pos_pw_now[j, 0]
-                pos_pw_now_shared[j * 3 + 1] = pos_pw_now[j, 1]
-                pos_pw_now_shared[j * 3 + 2] = pos_pw_now[j, 2]
+            pos_ball_now[0,:] += (1. / Frame) * pos_ball_deltamove[0,:]
+            pos_ball_now_shared[:] = pos_ball_now[0,:]
+            pos_pb_now += (1. / Frame) * pos_pb_deltamove
+            pos_pw_now += (1. / Frame) * pos_pw_deltamove
+            pos_pb_now_shared[:] = pos_pb_now.flat[:]
+            pos_pw_now_shared[:] = pos_pw_now.flat[:]
 
             # show only few frames depending of the divisor for the video (no effect on screen)
             if i%frame_divisor == 0:
                 p_ball._offsets3d = pos_ball_now[:, 0], pos_ball_now[:, 1], pos_ball_now[:, 2]
                 p_b._offsets3d = pos_pb_now[:, 0], pos_pb_now[:, 1], pos_pb_now[:, 2]
                 p_w._offsets3d = pos_pw_now[:, 0], pos_pw_now[:, 1], pos_pw_now[:, 2]
-                if (foo.button_anim_video_on.get_active()):
+                if anim_video_on:
                     video_page_iter = video_page_iter + 1
+#
+########################################################################################################################
+########################################################################################################################
+# path of the picture directory to be eventually adapted depending of the computer configuration
+#
                     plt.savefig("/home/family/Bilder" + "/file%03d.png" % video_page_iter)
+#
+########################################################################################################################
+########################################################################################################################
 
             if i == (Frame-1):
                 # reset the deltamove to a clean zero for last position in case of rounding elements
                 # or set to next step of dynamic move
-
-                pos_ball_deltamove[0, 0] = 0.
-                pos_ball_deltamove[0, 1] = 0.
-                pos_ball_deltamove[0, 2] = 0.
-                pos_ball_now[0, 0] = pos_ball_target[0, 0]
-                pos_ball_now[0, 1] = pos_ball_target[0, 1]
-                pos_ball_now[0, 2] = pos_ball_target[0, 2]
-                pos_ball_now_shared[0] = pos_ball_now[0, 0]
-                pos_ball_now_shared[1] = pos_ball_now[0, 1]
-                pos_ball_now_shared[2] = pos_ball_now[0, 2]
-
-                for j in range(6):
-                    pos_pb_deltamove[j, 0] = 0.
-                    pos_pb_deltamove[j, 1] = 0.
-                    pos_pb_deltamove[j, 2] = 0.
-                    pos_pw_deltamove[j, 0] = 0.
-                    pos_pw_deltamove[j, 1] = 0.
-                    pos_pw_deltamove[j, 2] = 0.
-
-                    pos_pb_now[j, 0] = pos_pb_target[j, 0]
-                    pos_pb_now[j, 1] = pos_pb_target[j, 1]
-                    pos_pb_now[j, 2] = pos_pb_target[j, 2]
-                    pos_pw_now[j, 0] = pos_pw_target[j, 0]
-                    pos_pw_now[j, 1] = pos_pw_target[j, 1]
-                    pos_pw_now[j, 2] = pos_pw_target[j, 2]
-
-                    pos_pb_now_shared[j * 3] = pos_pb_now[j, 0]
-                    pos_pb_now_shared[j * 3 + 1] = pos_pb_now[j, 1]
-                    pos_pb_now_shared[j * 3 + 2] = pos_pb_now[j, 2]
-                    pos_pw_now_shared[j * 3] = pos_pw_now[j, 0]
-                    pos_pw_now_shared[j * 3 + 1] = pos_pw_now[j, 1]
-                    pos_pw_now_shared[j * 3 + 2] = pos_pw_now[j, 2]
+                pos_ball_deltamove[:,:] = 0.
+                pos_ball_now[0,:] = pos_ball_target[0,:]
+                pos_ball_now_shared[:] = pos_ball_now[0,:]
+                pos_pb_deltamove[:,:] = 0.
+                pos_pw_deltamove[:,:] = 0.
+                pos_pb_now[:,:] = pos_pb_target[:,:]
+                pos_pw_now[:,:] = pos_pw_target[:,:]
+                pos_pb_now_shared[:] = pos_pb_now.flat[:]
+                pos_pw_now_shared[:] = pos_pw_now.flat[:]
 
                 if dynamic_move_according_file == False:
                     move_running = False    # it indicates the move is at the end. A new move could be after it has been
                                         # activated from the GUI
                 else:
-                    if lfd_seq < numb_seq and numb_seq!=0:
+                    if lfd_seq < numb_seq and numb_seq!=0 and animation_break == False:
                         lfd_seq += 1
-                        for k in range(6):
-                        # use the top of the array from file
-                            pos_pb_target[k, 0] = array_coord_sequence[k + (lfd_seq - 1) * 13, 0]
-                            pos_pb_target[k, 1] = array_coord_sequence[k + (lfd_seq - 1) * 13, 1]
-                            pos_pb_target[k, 2] = array_coord_sequence[k + (lfd_seq - 1) * 13, 2]
-                            pos_pw_target[k, 0] = array_coord_sequence[k + (lfd_seq - 1) * 13 + 6, 0]
-                            pos_pw_target[k, 1] = array_coord_sequence[k + (lfd_seq - 1) * 13 + 6, 1]
-                            pos_pw_target[k, 2] = array_coord_sequence[k + (lfd_seq - 1) * 13 + 6, 2]
 
-                            pos_pb_deltamove[k, 0] = pos_pb_target[k, 0] - pos_pb_now[k, 0]
-                            pos_pb_deltamove[k, 1] = pos_pb_target[k, 1] - pos_pb_now[k, 1]
-                            pos_pb_deltamove[k, 2] = pos_pb_target[k, 2] - pos_pb_now[k, 2]
-                            pos_pw_deltamove[k, 0] = pos_pw_target[k, 0] - pos_pw_now[k, 0]
-                            pos_pw_deltamove[k, 1] = pos_pw_target[k, 1] - pos_pw_now[k, 1]
-                            pos_pw_deltamove[k, 2] = pos_pw_target[k, 2] - pos_pw_now[k, 2]
-
-                        pos_ball_target[0, 0] = array_coord_sequence[12 + (lfd_seq - 1) * 13, 0]
-                        pos_ball_target[0, 1] = array_coord_sequence[12 + (lfd_seq - 1) * 13, 1]
-                        pos_ball_target[0, 2] = array_coord_sequence[12 + (lfd_seq - 1) * 13, 2]
-                        pos_ball_deltamove[0, 0] = pos_ball_target[0, 0] - pos_ball_now[0, 0]
-                        pos_ball_deltamove[0, 1] = pos_ball_target[0, 1] - pos_ball_now[0, 1]
-                        pos_ball_deltamove[0, 2] = pos_ball_target[0, 2] - pos_ball_now[0, 2]
-
+                        pos_pb_target[:,:] = array_coord_sequence[(lfd_seq - 1) * 13:((lfd_seq - 1) * 13)+6,:]
+                        pos_pw_target[:,:] = array_coord_sequence[((lfd_seq - 1) * 13)+6:((lfd_seq - 1) * 13)+12,:]
+                        pos_pb_deltamove[:,:] = pos_pb_target[:,:] - pos_pb_now[:,:]
+                        pos_pw_deltamove[:,:] = pos_pw_target[:,:] - pos_pw_now[:,:]
+                        pos_ball_target[0,:] = array_coord_sequence[12 + (lfd_seq - 1) * 13,:]
+                        pos_ball_deltamove[0,:] = pos_ball_target[0,:] - pos_ball_now[0,:]
                     else:
 
                         move_running = False
                         dynamic_move_according_file = False
 #
 class fooclass:
+    """GUI class
+    Args:
+        none
+    Output:
+        GUI with several linked functions
+    Returns:
+        GUI
+    """
     #
     def __init__(self):
         #
@@ -704,7 +662,7 @@ class fooclass:
 ########################################################################################################################
 # path of the GUI file to be eventually adapted depending of the computer configuration
 #
-        builder.add_from_file("/home/family/glade/game_uwr.glade")
+        builder.add_from_file("/home/family/glade/game_uwr_180424.glade")
 #
 ########################################################################################################################
 ########################################################################################################################
@@ -862,12 +820,21 @@ class fooclass:
         self.spinbutton_length_pw6 = builder.get_object("spinbutton_length_pw6")
         self.spinbutton_side_pw6 = builder.get_object("spinbutton_side_pw6")
         #
+        # ball
+        self.spinbutton_depth_ball = builder.get_object("spinbutton_depth_ball")
+        self.spinbutton_length_ball = builder.get_object("spinbutton_length_ball")
+        self.spinbutton_side_ball = builder.get_object("spinbutton_side_ball")
+        #
         # diverse button
         self.button_go_to = builder.get_object("button_go_to")
         #
         self.button_anim_video_on = builder.get_object("button_anim_video_on")
         self.button_anim_video_pause = builder.get_object("button_anim_video_pause")
         self.button_anim_video_off = builder.get_object("button_anim_video_off")
+        #
+        self.button_animation_on = builder.get_object("button_animation_on")
+        self.button_animation_off = builder.get_object("button_animation_off")
+        self.button_animation_break = builder.get_object("button_animation_break")
         #
         # generate move combobox
         self.move_combobox = builder.get_object("move_combobox")
@@ -905,12 +872,18 @@ class fooclass:
         self.add_separate_four_window_on = builder.get_object("button_add_separate_four_window_on")
         self.add_separate_four_window_off = builder.get_object("button_add_separate_four_window_off")
         #
+        self.animation_globalspeedstandard = builder.get_object("button_animation_globalspeedstandard")
+        self.animation_globalspeedslow = builder.get_object("button_animation_globalspeedslow")
+        #
         # file treatment entries
         self.default_filename_coord_store = builder.get_object("entry_filename_coord_store")
         self.write_file_coord = builder.get_object("ChooserButton_write_file_coord")
         self.read_file_coord = builder.get_object("ChooserButton_read_file_coord")
         self.frame_scaling = builder.get_object("scale_frame")
         self.default_filename_video_store = builder.get_object("entry_filename_video_store")
+        #
+        self.suptitle_text = builder.get_object("entry_suptitle_text")
+        self.label_active_pos = builder.get_object("label_active_pos")
         #
         builder.connect_signals(self)
         #
@@ -943,6 +916,10 @@ class fooclass:
         global filename_coord_store
         global filename_coord_retrieve
         global lfd_seq
+        global animation_slow
+        global plot_suptitle
+        global plot_suptitle_string
+        #
         '''by clicking the GO TO button in the GUI, all target move will be readen'''
         #
         # identify what type of move is set in the menue
@@ -956,7 +933,18 @@ class fooclass:
         dx_pos_ball = 0.
         dy_pos_ball = 0.
         dz_pos_ball = 0.
-
+        #
+        plot_suptitle.remove()
+        plot_suptitle = ax1.text2D(0., 1., plot_suptitle_string, fontweight='bold', fontsize=15,
+                                   transform=ax1.transAxes,
+                                   bbox={'facecolor': 'lightgreen', 'alpha': 0.5, 'pad': 10})
+        #
+        # get at what speed the animation will have to be done
+        if self.animation_globalspeedslow.get_active():
+            animation_slow = True
+        if self.animation_globalspeedstandard.get_active():
+            animation_slow = False
+        #
         if identified_move == "to menu coord":
 
             print("players to go to coordinates")
@@ -1405,13 +1393,13 @@ class fooclass:
 
             elif identified_move_ball == "player left":
 
-                dx_pos_ball = -0.6
+                dx_pos_ball = -0.4
                 dy_pos_ball = 0.
                 dz_pos_ball = 0.
 
             elif identified_move_ball == "player right":
 
-                dx_pos_ball = 0.6
+                dx_pos_ball = 0.4
                 dy_pos_ball = 0.
                 dz_pos_ball = 0.
 
@@ -1419,13 +1407,13 @@ class fooclass:
 
                 dx_pos_ball = 0.
                 dy_pos_ball = 0.
-                dz_pos_ball = 0.6
+                dz_pos_ball = 0.3
 
             elif identified_move_ball == "player down":
 
                 dx_pos_ball = 0.
                 dy_pos_ball = 0.
-                dz_pos_ball = -0.6
+                dz_pos_ball = -0.3
 
 
             if identified_move_ball_playercol == "white":
@@ -1482,6 +1470,13 @@ class fooclass:
                 pos_ball_target[0, 1] = s_l_shared.value - 0.24
                 pos_ball_target[0, 2] = 0.2
 
+            elif identified_move_ball == "coordinate":
+
+                pos_ball_target[0, 0] = self.spinbutton_side_ball.get_value()
+                pos_ball_target[0, 1] = self.spinbutton_length_ball.get_value()
+                pos_ball_target[0, 2] = s_d - self.spinbutton_depth_ball.get_value()
+
+
             pos_ball_deltamove[0, 0] = pos_ball_target[0, 0] - pos_ball_now[0, 0]
             pos_ball_deltamove[0, 1] = pos_ball_target[0, 1] - pos_ball_now[0, 1]
             pos_ball_deltamove[0, 2] = pos_ball_target[0, 2] - pos_ball_now[0, 2]
@@ -1522,6 +1517,45 @@ class fooclass:
                     #
             player_go_to_clicked = True  # only after the coordinates were set
 
+        elif identified_move == "till end of file":
+
+            dynamic_move_according_file = True
+            #
+            if lfd_seq < numb_seq:  # move only if it was not already at the end of the file
+                lfd_seq = lfd_seq + 1
+                print("players go till end of file sequence; ", lfd_seq)
+
+                buffer_label_active_pos = "%03d" % lfd_seq
+                self.label_active_pos.set_text(buffer_label_active_pos)
+
+                for i in range(6):
+                    # use the top of the array from file
+                    pos_pb_target[i, 0] = array_coord_sequence[i + (lfd_seq - 1) * 13, 0]
+                    pos_pb_target[i, 1] = array_coord_sequence[i + (lfd_seq - 1) * 13, 1]
+                    pos_pb_target[i, 2] = array_coord_sequence[i + (lfd_seq - 1) * 13, 2]
+                    pos_pw_target[i, 0] = array_coord_sequence[i + (lfd_seq - 1) * 13 + 6, 0]
+                    pos_pw_target[i, 1] = array_coord_sequence[i + (lfd_seq - 1) * 13 + 6, 1]
+                    pos_pw_target[i, 2] = array_coord_sequence[i + (lfd_seq - 1) * 13 + 6, 2]
+                pos_ball_target[0, 0] = array_coord_sequence[12 + (lfd_seq - 1) * 13, 0]
+                pos_ball_target[0, 1] = array_coord_sequence[12 + (lfd_seq - 1) * 13, 1]
+                pos_ball_target[0, 2] = array_coord_sequence[12 + (lfd_seq - 1) * 13, 2]
+
+                if move_running == False:  # delta move calculation only when a move is not activ.. before pb_target calc?
+
+                    for j in range(6):
+                        pos_pb_deltamove[j, 0] = pos_pb_target[j, 0] - pos_pb_now[j, 0]
+                        pos_pb_deltamove[j, 1] = pos_pb_target[j, 1] - pos_pb_now[j, 1]
+                        pos_pb_deltamove[j, 2] = pos_pb_target[j, 2] - pos_pb_now[j, 2]
+                        pos_pw_deltamove[j, 0] = pos_pw_target[j, 0] - pos_pw_now[j, 0]
+                        pos_pw_deltamove[j, 1] = pos_pw_target[j, 1] - pos_pw_now[j, 1]
+                        pos_pw_deltamove[j, 2] = pos_pw_target[j, 2] - pos_pw_now[j, 2]
+
+                    pos_ball_deltamove[0, 0] = pos_ball_target[0, 0] - pos_ball_now[0, 0]
+                    pos_ball_deltamove[0, 1] = pos_ball_target[0, 1] - pos_ball_now[0, 1]
+                    pos_ball_deltamove[0, 2] = pos_ball_target[0, 2] - pos_ball_now[0, 2]
+
+                player_go_to_clicked = True  # only after the coordinates were set
+
         elif  identified_move == "to first file pos":
 
             print("players go to first position according file sequence")
@@ -1529,6 +1563,10 @@ class fooclass:
             #
             if numb_seq > 0:   # non empty file was opened
                 lfd_seq = 1
+
+                buffer_label_active_pos = "%03d" % lfd_seq
+                self.label_active_pos.set_text(buffer_label_active_pos)
+
                 for i in range(6):
                     # initialize the top of the array from file
                     pos_pb_target[i, 0] = array_coord_sequence [i, 0]
@@ -1565,6 +1603,9 @@ class fooclass:
             if numb_seq > 0:   # non empty file was opened
                 lfd_seq = numb_seq
             #
+                buffer_label_active_pos = "%03d" % lfd_seq
+                self.label_active_pos.set_text(buffer_label_active_pos)
+
                 for i in range(6):
                 # use the top of the array from file
                     pos_pb_target[i, 0] = array_coord_sequence [i+(lfd_seq - 1) * 13, 0]
@@ -1598,6 +1639,10 @@ class fooclass:
             #
             if lfd_seq < numb_seq:    # move only if it was not already at the end of the file
                 lfd_seq = lfd_seq + 1
+
+                buffer_label_active_pos = "%03d" % lfd_seq
+                self.label_active_pos.set_text(buffer_label_active_pos)
+
                 print("players go to next position according file sequence; ", lfd_seq)
                 for i in range(6):
                     # use the top of the array from file
@@ -1634,6 +1679,10 @@ class fooclass:
             if lfd_seq > 1:  # move only if it was not already at the beginning of the file
 
                 lfd_seq = lfd_seq - 1
+
+                buffer_label_active_pos = "%03d" % lfd_seq
+                self.label_active_pos.set_text(buffer_label_active_pos)
+
                 print("players go to previous position according file sequence; ", lfd_seq)
 
                 for i in range(6):
@@ -1671,30 +1720,52 @@ class fooclass:
     #
     #
     def set_azimut_elevation(self, widget, data=None):
-        print("azimut elevation new")
+        """set the azimut and elevation to GUI values
+        Args:
+            elev and azim
+        Output:
+            updated ax1
+        Returns:
+            None
+        """
         azimut = self.azimut_scaling.get_value()
         elevation = self.elevation_scaling.get_value()
         ax1.view_init(elev=elevation, azim=azimut)
+        print("azimut elevation new ", azimut, elevation)
     #
     #
-    def change_settings(self, widget, data=None):
-        global filename_coord_store
-        print("change settings")
+#    def change_settings(self, widget, data=None):
+#        global filename_coord_store
+#        global animation_slow
+#        print("change settings")
         # file name
-        filename_coord_store = self.default_filename_coord_store.get_text()
-        if filename_coord_store == "":
-            filename_coord_store = 'pos_uwr_player.csv'
-            self.default_filename_coord_store.set_text('pos_uwr_player.csv')
-        else:
-            filename_coord_store = filename_coord_store + '.csv'
-
+#        filename_coord_store = self.default_filename_coord_store.get_text()
+#        if filename_coord_store == "":
+#            filename_coord_store = 'pos_uwr_player.csv'
+#            self.default_filename_coord_store.set_text('pos_uwr_player.csv')
+#        else:
+#            filename_coord_store = filename_coord_store + '.csv'
+#
+    def animation_standard_on (self, widget, data=None):
+        global animation_slow
+        if self.animation_globalspeedstandard.get_active():
+            print("animation change to standard")
+            animation_slow = False
+    #
+    def animation_slow_on (self, widget, data=None):
+        global animation_slow
+        if self.animation_globalspeedslow.get_active():
+            print("animation change to slow")
+            animation_slow = True
+    #
     def on_game_uwr_exit(self,widget,data=None):
         print("exit")
+        plt.close('all')
         gtk.main_quit()
 
     def set_coord_menue (self, widget, data=None):
         """reset all coord data in the spinbutton of the GUI according the current position"""
-        print("set menue coord data to current player pos in game view")
+        print("set menue coord data to current player and ball pos in game view")
         if move_running == False:
             #
             self.spinbutton_depth_pb1.set_value(s_d-pos_pb_now[0, 2])
@@ -1744,7 +1815,10 @@ class fooclass:
             self.spinbutton_depth_pw6.set_value(s_d-pos_pw_now[5, 2])
             self.spinbutton_length_pw6.set_value(s_l-pos_pw_now[5, 1])
             self.spinbutton_side_pw6.set_value(s_w-pos_pw_now[5, 0])
-        #
+            #
+            self.spinbutton_depth_ball.set_value(s_d - pos_ball_now[0, 2])
+            self.spinbutton_length_ball.set_value(pos_ball_now[0, 1])
+            self.spinbutton_side_ball.set_value(pos_ball_now[0, 0])
 #
     def store_coord (self, widget, data=None):
         global pos_pb_now
@@ -1792,13 +1866,6 @@ class fooclass:
             #
             if numb_seq !=0:
 
-#                print("array before change: ", array_coord_sequence)
-#                length_array, wide_array = array_coord_sequence.shape
-#                print("array length before change: ", length_array)
-#                print("array wide before change: ", wide_array)
-#                length_seq, whatever = divmod(length_array, 13)
-#                print("number identified sequences before change: ", length_seq)
-
                 for k in range(6):
                     array_coord_sequence[k + (lfd_seq - 1) * 13, 0] = pos_pb_now[k, 0]
                     array_coord_sequence[k + (lfd_seq - 1) * 13, 1] = pos_pb_now[k, 1]
@@ -1811,14 +1878,6 @@ class fooclass:
                 array_coord_sequence[12 + (lfd_seq - 1) * 13, 1] = pos_ball_now[0, 1]
                 array_coord_sequence[12 + (lfd_seq - 1) * 13, 2] = pos_ball_now[0, 2]
 
-#                print("array after change: ", array_coord_sequence)
-#                length_array, wide_array = array_coord_sequence.shape
-#                print("array length after change: ", length_array)
-#                print("array wide after change: ", wide_array)
-#                length_seq, whatever = divmod(length_array, 13)
-#                print("number identified sequences after change: ", length_seq)
-#                print("number identified sequences previously: ", numb_seq)
-
             #
     def store_file_coord (self, widget, data=None):
         global move_running
@@ -1828,26 +1887,16 @@ class fooclass:
         # if file not open, open it then append the pos blue and white to it
         if move_running == False:
             #
-            if self.write_file_coord.get_filename() == None:
-
-                if self.default_filename_coord_store.get_text() == "":
-                    filename_coord_store = 'pos_uwr_player.csv'
-                else:
-                    filename_coord_store = filename_coord_store + '.csv'
-                print("store coord into file new/overwriting", filename_coord_store)
-
-            else:
-                filename_coord_store = self.write_file_coord.get_filename()
-                print("store coord into existing file overwriting", filename_coord_store)
-
-            f_store_handler_local = open(filename_coord_store, 'wb')
+            filename_coord_store = self.default_filename_coord_store.get_text()
             #
-#            print("array to be newly stored: ", array_coord_sequence)
-#            length_array, wide_array = array_coord_sequence.shape
-#            print("array length: ", length_array)
-#            print("array wide: ", wide_array)
-#            length_seq, whatever = divmod(length_array, 13)
-#            print("number identified sequences: ", length_seq)
+            if filename_coord_store == "":
+                filename_coord_store = 'pos_uwr_player.csv'
+            else:
+                if filename_coord_store.find('.csv') == -1:  # -1 will be returned when a is not in b
+                    filename_coord_store = filename_coord_store + '.csv'
+            print("store coord into file new/overwriting", filename_coord_store)
+            #
+            f_store_handler_local = open(filename_coord_store, 'wb')
             #
             np.savetxt(f_store_handler_local, array_coord_sequence, fmt='%5.2f', delimiter=' , ')
             f_store_handler_local.close()  # close after at each opening else lost of data by exiting
@@ -1873,6 +1922,44 @@ class fooclass:
 #        print("array wide: ", wide_array)
         numb_seq, whatever = divmod(length_array, 13)
         print("number identified sequences: ", numb_seq)
+    #
+    def insert_pos_before (self, widget, data=None):
+        global array_coord_sequence
+        global numb_seq
+        global lfd_seq
+
+        if numb_seq !=0:
+            # add 13 lines distributed in 1 sequence
+            print("insert new sequence before (only in memory)  ", lfd_seq)
+            length_array, wide_array = array_coord_sequence.shape
+            print("array before insertion length x wide : ", length_array, wide_array)
+            b = np.copy(array_coord_sequence)
+            array_coord_sequence = array_coord_sequence.copy()
+            array_coord_sequence.resize(((numb_seq + 1)*13, 3))
+            array_coord_sequence[lfd_seq*13:,:]= b [(lfd_seq-1)*13:,:]
+            numb_seq += 1
+            length_array, wide_array = array_coord_sequence.shape
+            print("array after insertion length x wide : ", length_array, wide_array)
+
+    #
+    def delete_this_pos (self, widget, data=None):
+        global array_coord_sequence
+        global numb_seq
+        global lfd_seq
+        if numb_seq > 0:
+            print("delete this file sequence (only in memory)  ", lfd_seq)
+            length_array, wide_array = array_coord_sequence.shape
+            print("array before deletion length x wide : ", length_array, wide_array)
+
+#            b = np.delete(array_coord_sequence,[range((lfd_seq-1)*13,lfd_seq*13)],0)
+            b = np.copy(array_coord_sequence)
+            array_coord_sequence = array_coord_sequence.copy()
+            array_coord_sequence.resize(((numb_seq - 1)*13, 3))
+            array_coord_sequence[(lfd_seq-1)*13:,:]= b [lfd_seq*13:,:]
+
+            numb_seq -=1
+            length_array, wide_array = array_coord_sequence.shape
+            print("array after deletion length x wide : ", length_array, wide_array)
     #
     def free_sphere_on (self, widget, data=None):
         global free_sphere
@@ -1993,6 +2080,15 @@ class fooclass:
 
     def separate_one_window_on (self, widget, data=None):
         global pOne
+        """
+        function separate_one_window_on sub-process generated from GUI
+        Args:
+        - from GUI
+        Out:
+        - additional 3D window started by a process
+        Return:
+        - global pOne process id
+        """
         if (self.add_separate_one_window_on.get_active()):
             print("open separate additional window 3D")
             pOne = mp.Process(target=OneWindow, args=(s_w_shared, s_d_shared, s_l_shared, el_w_shared, elevation_shared,
@@ -2000,12 +2096,30 @@ class fooclass:
             pOne.start()
 
     def separate_one_window_off(self, widget, data=None):
+        """
+        function close separate_one_window_on by terminating the sub-process already generated from GUI
+        Args:
+        - from GUI
+        Out:
+        - closed additional 3D window
+        Return:
+        - none
+        """
         if (self.add_separate_one_window_off.get_active()):
             print("close separate additional window 3D")
             pOne.terminate()
 
     def separate_four_window_on (self, widget, data=None):
         global pFour
+        """
+        function separate_four_window_on sub-process generated from GUI
+        Args:
+        - from GUI
+        Out:
+        - additional window 4 views started by a process
+        Return:
+        - global process id pFour
+        """
         if (self.add_separate_four_window_on.get_active()):
             print("open separate window 4x")
             pFour = mp.Process(target=FourWindows, args=(s_w_shared, s_d_shared, s_l_shared, el_w_shared, pos_pb_now_shared,
@@ -2017,25 +2131,55 @@ class fooclass:
             print("close separate window 4x")
             pFour.terminate()
 
-    def anim_video_on_toggled (self, widget, data=None):   # test the foo status
+    def animation_off_toggled (self, widget, data=None):
+        global ani1
+        if (self.button_animation_off.get_active()):
+            print("pause animation")
+            ani1.event_source.stop()
+#            fig.canvas.draw()
+
+    def animation_break_toggled(self, widget, data=None):
+        global animation_break
+        if (self.button_animation_break.get_active()):
+            print("break animation; stop animation asap")
+            animation_break = True
+#
+    def animation_on_toggled(self, widget, data=None):
+        global ani1
+        global animation_slow
+        global animation_break
+        animation_break = False
+        if (self.button_animation_on.get_active()):
+            if (self.animation_globalspeedslow.get_active()):
+                animation_slow = True
+                print("activate animation; slow animation mode according setting")
+            else:
+                animation_slow = False
+                print("activate animation; standard animation mode according setting")
+            ani1.event_source.start()
+#            fig.canvas.draw()
+
+    def anim_video_on_toggled(self, widget, data=None):  # test the foo status
         global video_page_iter
+        global frame_divisor
+        global anim_video_on
+        print("video button on clicked")
         if (self.button_anim_video_on.get_active()):
             print("video running now")
             video_page_iter = 1
+            frame_divisor = int(self.frame_scaling.get_value())
+            anim_video_on = True
+
 #            home = os.path.expanduser("~")  # Set the variable home by expanding the user's set home directory
 #            if not os.path.exists(os.path.join(home, "Bilder")):  # os.path.join() for making a full path safely
 #                os.makedirs(os.path.join(home,"Bilder"))  # If not create the directory, inside their home directory
-########################################################################################################################
-########################################################################################################################
-# path of the picture directory to be eventually adapted depending of the computer configuration
 #
-            plt.savefig("/home/family/Bilder" + "/file%03d.png" % video_page_iter)
-#
-########################################################################################################################
-########################################################################################################################
-
     def anim_video_off_toggled (self, widget, data=None):
         global video_page_iter
+        global anim_video_on
+        print("video stop button clicked")
+        anim_video_on = False
+        # verify/confirm the off button is active and create a video only if more than one image exists
         if self.button_anim_video_off.get_active() and video_page_iter > 1:
             print("video stopped and written: overwritting of existing file")
             video_file_name = self.default_filename_video_store.get_text()
@@ -2060,8 +2204,24 @@ class fooclass:
             video_page_iter = 0
 
     def anim_video_pause_toggled (self, widget, data=None):
+        global anim_video_on
+        print("video button pause clicked")
         if (self.button_anim_video_pause.get_active()):
-            print("video paused")
+            print("video confirmed paused")
+            anim_video_on = False
+
+    def update_suptitle (self, widget, data=None):
+        global plot_suptitle_string
+        global plot_suptitle
+        plot_suptitle_string = self.suptitle_text.get_text()
+        if plot_suptitle_string == "":
+            plot_suptitel_string = "underwaterrugby"
+        plot_suptitle.remove()
+        plot_suptitle = ax1.text2D(0., 1., plot_suptitle_string, fontweight='bold', fontsize=15,
+                                   transform=ax1.transAxes,
+                                   bbox={'facecolor': 'lightgreen', 'alpha': 0.5, 'pad': 10})
+        fig.canvas.draw()
+
 
 if __name__=="__main__":
     #
@@ -2104,7 +2264,7 @@ if __name__=="__main__":
     clicked_coord.append([0., 0., 0.])
     selected_coord = [0., 0., 0.]
     #
-    numb_seq = 0 # number of sequences within a loaded possition file
+    numb_seq = 0 # number of sequences within a loaded position file
     lfd_seq = 1 # default position of the position file is 1
     video_page_iter = 0
     #
@@ -2139,6 +2299,10 @@ if __name__=="__main__":
     #
     player_go_to_clicked = False
     move_running = False
+    animation_slow = False   # it means later no pause in the animation function
+    anim_video_on = False
+    animation_break = False
+    frame_divisor = 1
     #
     # initialized the shared data pos in case the "go to" button is clicked after the windows are clicked
     # in order to give a position and not all at zero
@@ -2156,7 +2320,11 @@ if __name__=="__main__":
     # create the GUI
     foo=fooclass()
     foo.window_main.show()
+    foo.window_main.connect('destroy', gtk.main_quit)
     #
+    buffer_label_active_pos = "%03d" % 0
+    foo.label_active_pos.set_text(buffer_label_active_pos)
+
     fig = plt.figure()
     ax1 = fig.add_subplot(111,projection='3d')
     # field
@@ -2173,6 +2341,10 @@ if __name__=="__main__":
     ax1.set_xlabel('Wide')
     ax1.set_ylabel('Length')
     ax1.set_zlabel('Water')
+    #
+    plot_suptitle_string = "underwaterrugby"
+    plot_suptitle = ax1.text2D(0., 1., plot_suptitle_string,fontweight='bold',fontsize=15, transform=ax1.transAxes,
+                               bbox={'facecolor': 'lightgreen', 'alpha': 0.5 , 'pad': 10})
     #
     # draw the 2 lines which show the depth
     xG1 = [0, s_w]
@@ -2215,11 +2387,15 @@ if __name__=="__main__":
         annotate3D(ax1, s=str(j+1), xyz=xyz_, fontsize=10, xytext=(-3,3),
                    textcoords='offset points', ha='right', va='bottom')
 
-    Frame = 20  # dont change this! because you can speed up with the Frame divisor from the GUI which
-                # will be between 1 and 20
-
-    ani1 = animation.FuncAnimation(fig, animate, frames=Frame, interval=400, blit=False, repeat=True,
-                                   repeat_delay=400)
+    Frame = 50  # video will speed up with the Frame divisor from the GUI which
+                # will be between 1 and 25 with steps of 5
+    # interval=xx in ms between 2 frames; repeat_delay=yy in ms before the animate function is restarted
+    # Frame 50    Interval 2   repeat 0  looks like normal appearance. the GUI interaction probably slow everything down
+    # the slow modus in the setting will activate a pause timer in the animate function
+    Interval_Frame = 2
+    Repeat_Delay_Anim = 0
+    ani1 = animation.FuncAnimation(fig, animate, frames=Frame, interval=Interval_Frame, blit=False, repeat=True,
+                                   repeat_delay=Repeat_Delay_Anim)
 
     plt.pause(0.001)
 
